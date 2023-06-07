@@ -12,17 +12,19 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
 @HiltViewModel
 class DreamViewModel @Inject constructor(
     private val gptRepository: GptRepository
 ) : ViewModel() {
-
-
     val state = MutableStateFlow<DreamState>(DreamState.InitState)
 
     val _dreamText = MutableLiveData<String>()
     val dreamText: LiveData<String> get() = _dreamText
+
+    // Añade un LiveData para manejar los errores
+    private val _error = MutableLiveData<String>()
+    val error: LiveData<String> get() = _error
+
     fun getDream(dreamText: String) {
         val gptRequest = GptRequest(
             model = "gpt-3.5-turbo",
@@ -46,8 +48,10 @@ class DreamViewModel @Inject constructor(
                 is ResultDomain.Success -> {
                     setState(DreamState.SuccessDream(result.data?.choices?.first()?.message?.content.orEmpty()))
                 }
-
-                is ResultDomain.Error -> setState(DreamState.Error)
+                is ResultDomain.Error -> {
+                    _error.value = result.exception.message
+                    setState(DreamState.Error)
+                }
             }
         }
     }
